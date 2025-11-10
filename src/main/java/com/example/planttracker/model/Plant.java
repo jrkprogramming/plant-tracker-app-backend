@@ -6,6 +6,7 @@ import java.time.LocalDate;
 
 @Document(collection = "plants")
 public class Plant {
+
     @Id
     private String id;
     private String name;
@@ -19,15 +20,34 @@ public class Plant {
     private String idealTemperature;
     private String notes;
 
-
     public Plant() {}
 
+    // Constructor with required fields
     public Plant(String name, String species, LocalDate lastWateredDate, int wateringFrequencyDays, String ownerUsername) {
+        this(name, species, lastWateredDate, wateringFrequencyDays, ownerUsername, null, null, null, null, null);
+    }
+
+    // Full constructor with all fields
+    public Plant(String name,
+                 String species,
+                 LocalDate lastWateredDate,
+                 int wateringFrequencyDays,
+                 String ownerUsername,
+                 String soilType,
+                 String fertilizer,
+                 String sunExposure,
+                 String idealTemperature,
+                 String notes) {
         this.name = name;
         this.species = species;
         this.lastWateredDate = lastWateredDate;
         this.wateringFrequencyDays = wateringFrequencyDays;
         this.ownerUsername = ownerUsername;
+        this.soilType = soilType;
+        this.fertilizer = fertilizer;
+        this.sunExposure = sunExposure;
+        this.idealTemperature = idealTemperature;
+        this.notes = notes;
     }
 
     // Getters & Setters
