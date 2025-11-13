@@ -25,6 +25,17 @@ public class PlantController {
         return plantService.getPlantsByOwner(username);
     }
 
+    // 🔍 Get a single plant by ID
+    @GetMapping("/{id}/details")
+    public Plant getPlantById(@PathVariable String id,
+                              @RequestParam String username) {
+        Plant plant = plantService.getPlantById(id);
+        if (!plant.getOwnerUsername().equals(username)) {
+            throw new RuntimeException("You can only access your own plants");
+        }
+        return plant;
+    }
+
     // 🌿 Add a new plant
     @PostMapping
     public Plant addPlant(@RequestBody Plant plant) {
@@ -59,7 +70,7 @@ public class PlantController {
     public Plant addComment(@PathVariable String id,
                             @PathVariable int logIndex,
                             @RequestBody PlantComment comment,
-                            @RequestParam String username) { // ✅ include username
+                            @RequestParam String username) {
         return plantService.addCommentToLog(id, logIndex, comment, username);
     }
 

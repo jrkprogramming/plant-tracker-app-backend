@@ -7,6 +7,7 @@ import com.example.planttracker.repository.PlantRepository;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -18,9 +19,15 @@ public class PlantService {
         this.plantRepository = plantRepository;
     }
 
-    // 🌱 Get plants only for a specific user
+    // 🌱 Get all plants for a specific user
     public List<Plant> getPlantsByOwner(String ownerUsername) {
         return plantRepository.findByOwnerUsername(ownerUsername);
+    }
+
+    // 🔍 Get a single plant by ID
+    public Plant getPlantById(String plantId) {
+        return plantRepository.findById(plantId)
+                .orElseThrow(() -> new RuntimeException("Plant not found"));
     }
 
     // 🌿 Add a new plant
@@ -28,58 +35,62 @@ public class PlantService {
         if (plant.getOwnerUsername() == null || plant.getOwnerUsername().isEmpty()) {
             throw new RuntimeException("Plant must have an ownerUsername");
         }
+        if (plant.getLogs() == null) plant.setLogs(new ArrayList<>());
         return plantRepository.save(plant);
     }
 
-    // 🌻 Update an existing plant (only owner can update)
-    public Plant updatePlant(String id, Plant updatedPlant, String ownerUsername) {
-        Plant existingPlant = plantRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Plant not found"));
-
-        if (!existingPlant.getOwnerUsername().equals(ownerUsername)) {
+    // 🌻 Update an existing plant (only owner)
+    public Plant updatePlant(String plantId, Plant updatedPlant, String ownerUsername) {
+        Plant existing = getPlantById(plantId);
+        if (!existing.getOwnerUsername().equals(ownerUsername)) {
             throw new RuntimeException("You can only update your own plants");
         }
 
-        existingPlant.setName(updatedPlant.getName());
-        existingPlant.setSpecies(updatedPlant.getSpecies());
-        existingPlant.setLastWateredDate(updatedPlant.getLastWateredDate());
-        existingPlant.setWateringFrequencyDays(updatedPlant.getWateringFrequencyDays());
+        existing.setName(updatedPlant.getName());
+        existing.setSpecies(updatedPlant.getSpecies());
+        existing.setLastWateredDate(updatedPlant.getLastWateredDate());
+        existing.setWateringFrequencyDays(updatedPlant.getWateringFrequencyDays());
+        existing.setSoilType(updatedPlant.getSoilType());
+        existing.setFertilizer(updatedPlant.getFertilizer());
+        existing.setSunExposure(updatedPlant.getSunExposure());
+        existing.setIdealTemperature(updatedPlant.getIdealTemperature());
+        existing.setNotes(updatedPlant.getNotes());
 
-        // Logs and comments are managed separately
-        return plantRepository.save(existingPlant);
+        if (existing.getLogs() == null) existing.setLogs(new ArrayList<>());
+
+        return plantRepository.save(existing);
     }
 
     // 🌾 Delete a plant (only owner)
-    public void deletePlant(String id, String ownerUsername) {
-        Plant existingPlant = plantRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Plant not found"));
-
-        if (!existingPlant.getOwnerUsername().equals(ownerUsername)) {
+    public void deletePlant(String plantId, String ownerUsername) {
+        Plant existing = getPlantById(plantId);
+        if (!existing.getOwnerUsername().equals(ownerUsername)) {
             throw new RuntimeException("You can only delete your own plants");
         }
-
-        plantRepository.delete(existingPlant);
+        plantRepository.delete(existing);
     }
 
-    // 📸 Add a log (photo + note) to a plant
+    // 📸 Add a log (photo + note) to a plant (only owner)
     public Plant addLogToPlant(String plantId, PlantLog newLog, String ownerUsername) {
-        Plant plant = plantRepository.findById(plantId)
-                .orElseThrow(() -> new RuntimeException("Plant not found"));
-
+        Plant plant = getPlantById(plantId);
         if (!plant.getOwnerUsername().equals(ownerUsername)) {
             throw new RuntimeException("You can only add logs to your own plants");
         }
+
+        if (newLog.getNote() == null || newLog.getNote().trim().isEmpty()) {
+            throw new RuntimeException("Log must have a note");
+        }
+        if (plant.getLogs() == null) plant.setLogs(new ArrayList<>());
+        if (newLog.getComments() == null) newLog.setComments(new ArrayList<>());
 
         newLog.setTimestamp(Instant.now());
         plant.getLogs().add(newLog);
         return plantRepository.save(plant);
     }
 
-    // 💬 Add a comment to a specific plant log
+    // 💬 Add a comment to a specific log (only owner)
     public Plant addCommentToLog(String plantId, int logIndex, PlantComment newComment, String ownerUsername) {
-        Plant plant = plantRepository.findById(plantId)
-                .orElseThrow(() -> new RuntimeException("Plant not found"));
-
+        Plant plant = getPlantById(plantId);
         if (!plant.getOwnerUsername().equals(ownerUsername)) {
             throw new RuntimeException("You can only comment on your own plants' logs");
         }
@@ -88,16 +99,21 @@ public class PlantService {
             throw new RuntimeException("Invalid log index");
         }
 
+        if (newComment.getComment() == null || newComment.getComment().trim().isEmpty()) {
+            throw new RuntimeException("Comment must have text");
+        }
+
         newComment.setTimestamp(Instant.now());
-        plant.getLogs().get(logIndex).getComments().add(newComment);
+        PlantLog log = plant.getLogs().get(logIndex);
+        if (log.getComments() == null) log.setComments(new ArrayList<>());
+        log.getComments().add(newComment);
+
         return plantRepository.save(plant);
     }
 
-    // 🗑️ Delete a log from a plant
+    // 🗑️ Delete a log from a plant (only owner)
     public Plant deleteLog(String plantId, int logIndex, String ownerUsername) {
-        Plant plant = plantRepository.findById(plantId)
-                .orElseThrow(() -> new RuntimeException("Plant not found"));
-
+        Plant plant = getPlantById(plantId);
         if (!plant.getOwnerUsername().equals(ownerUsername)) {
             throw new RuntimeException("You can only delete your own logs");
         }
