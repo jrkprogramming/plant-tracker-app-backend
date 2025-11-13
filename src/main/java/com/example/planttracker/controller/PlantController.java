@@ -10,7 +10,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/plants")
-@CrossOrigin(origins = "http://localhost:3000") // ✅ Allow frontend access
+@CrossOrigin(origins = "http://localhost:3000")
 public class PlantController {
 
     private final PlantService plantService;
