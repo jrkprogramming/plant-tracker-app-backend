@@ -2,85 +2,127 @@ package com.example.planttracker.model;
 
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
+
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 
 @Document(collection = "plants")
 public class Plant {
-
     @Id
     private String id;
+
     private String name;
     private String species;
+    private String ownerUsername;
     private LocalDate lastWateredDate;
     private int wateringFrequencyDays;
-    private String ownerUsername;
+
+    // 🌿 Optional plant details
     private String soilType;
     private String fertilizer;
     private String sunExposure;
     private String idealTemperature;
     private String notes;
 
-    public Plant() {}
+    // 📸 Plant logs (photo, note, comments)
+    private List<PlantLog> logs = new ArrayList<>();
 
-    // Constructor with required fields
-    public Plant(String name, String species, LocalDate lastWateredDate, int wateringFrequencyDays, String ownerUsername) {
-        this(name, species, lastWateredDate, wateringFrequencyDays, ownerUsername, null, null, null, null, null);
+    // ---------- Getters & Setters ----------
+
+    public String getId() {
+        return id;
     }
 
-    // Full constructor with all fields
-    public Plant(String name,
-                 String species,
-                 LocalDate lastWateredDate,
-                 int wateringFrequencyDays,
-                 String ownerUsername,
-                 String soilType,
-                 String fertilizer,
-                 String sunExposure,
-                 String idealTemperature,
-                 String notes) {
+    public void setId(String id) {
+        this.id = id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
         this.name = name;
+    }
+
+    public String getSpecies() {
+        return species;
+    }
+
+    public void setSpecies(String species) {
         this.species = species;
-        this.lastWateredDate = lastWateredDate;
-        this.wateringFrequencyDays = wateringFrequencyDays;
+    }
+
+    public String getOwnerUsername() {
+        return ownerUsername;
+    }
+
+    public void setOwnerUsername(String ownerUsername) {
         this.ownerUsername = ownerUsername;
+    }
+
+    public LocalDate getLastWateredDate() {
+        return lastWateredDate;
+    }
+
+    public void setLastWateredDate(LocalDate lastWateredDate) {
+        this.lastWateredDate = lastWateredDate;
+    }
+
+    public int getWateringFrequencyDays() {
+        return wateringFrequencyDays;
+    }
+
+    public void setWateringFrequencyDays(int wateringFrequencyDays) {
+        this.wateringFrequencyDays = wateringFrequencyDays;
+    }
+
+    public String getSoilType() {
+        return soilType;
+    }
+
+    public void setSoilType(String soilType) {
         this.soilType = soilType;
+    }
+
+    public String getFertilizer() {
+        return fertilizer;
+    }
+
+    public void setFertilizer(String fertilizer) {
         this.fertilizer = fertilizer;
+    }
+
+    public String getSunExposure() {
+        return sunExposure;
+    }
+
+    public void setSunExposure(String sunExposure) {
         this.sunExposure = sunExposure;
+    }
+
+    public String getIdealTemperature() {
+        return idealTemperature;
+    }
+
+    public void setIdealTemperature(String idealTemperature) {
         this.idealTemperature = idealTemperature;
+    }
+
+    public String getNotes() {
+        return notes;
+    }
+
+    public void setNotes(String notes) {
         this.notes = notes;
     }
 
-    // Getters & Setters
-    public String getId() { return id; }
-    public void setId(String id) { this.id = id; }
+    public List<PlantLog> getLogs() {
+        return logs;
+    }
 
-    public String getName() { return name; }
-    public void setName(String name) { this.name = name; }
-
-    public String getSpecies() { return species; }
-    public void setSpecies(String species) { this.species = species; }
-
-    public LocalDate getLastWateredDate() { return lastWateredDate; }
-    public void setLastWateredDate(LocalDate lastWateredDate) { this.lastWateredDate = lastWateredDate; }
-
-    public int getWateringFrequencyDays() { return wateringFrequencyDays; }
-    public void setWateringFrequencyDays(int wateringFrequencyDays) { this.wateringFrequencyDays = wateringFrequencyDays; }
-
-    public String getOwnerUsername() { return ownerUsername; }
-    public void setOwnerUsername(String ownerUsername) { this.ownerUsername = ownerUsername; }
-
-    public String getSoilType() { return soilType; }
-    public void setSoilType(String soilType) { this.soilType = soilType; }
-
-    public String getFertilizer() { return fertilizer; }
-    public void setFertilizer(String fertilizer) { this.fertilizer = fertilizer; }
-
-    public String getSunExposure() { return sunExposure; }
-    public void setSunExposure(String sunExposure) { this.sunExposure = sunExposure; }
-
-    public String getIdealTemperature() { return idealTemperature; }
-    public void setIdealTemperature(String idealTemperature) { this.idealTemperature = idealTemperature; }
-
-    public String getNotes() { return notes; }
-    public void setNotes(String notes) { this.notes = notes; }
+    public void setLogs(List<PlantLog> logs) {
+        this.logs = logs;
+    }
 }
