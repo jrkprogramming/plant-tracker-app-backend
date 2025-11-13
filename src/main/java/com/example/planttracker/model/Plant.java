@@ -28,6 +28,9 @@ public class Plant {
     // 📸 Plant logs (photo, note, comments)
     private List<PlantLog> logs = new ArrayList<>();
 
+    // ⚠ Overdue watering flag
+    private boolean overdue;
+
     // ---------- Getters & Setters ----------
 
     public String getId() {
@@ -124,5 +127,13 @@ public class Plant {
 
     public void setLogs(List<PlantLog> logs) {
         this.logs = logs;
+    }
+
+    public boolean isOverdue() {
+        return overdue;
+    }
+
+    public void setOverdue(boolean overdue) {
+        this.overdue = overdue;
     }
 }

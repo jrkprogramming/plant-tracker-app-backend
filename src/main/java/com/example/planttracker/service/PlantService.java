@@ -7,6 +7,7 @@ import com.example.planttracker.repository.PlantRepository;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -19,15 +20,29 @@ public class PlantService {
         this.plantRepository = plantRepository;
     }
 
-    // 🌱 Get all plants for a specific user
+    // 🌱 Get all plants for a specific user, include overdue flag
     public List<Plant> getPlantsByOwner(String ownerUsername) {
-        return plantRepository.findByOwnerUsername(ownerUsername);
+        List<Plant> plants = plantRepository.findByOwnerUsername(ownerUsername);
+        plants.forEach(this::setOverdueFlag);
+        return plants;
     }
 
-    // 🔍 Get a single plant by ID
+    // 🔍 Get a single plant by ID, include overdue flag
     public Plant getPlantById(String plantId) {
-        return plantRepository.findById(plantId)
+        Plant plant = plantRepository.findById(plantId)
                 .orElseThrow(() -> new RuntimeException("Plant not found"));
+        setOverdueFlag(plant);
+        return plant;
+    }
+
+    // Helper: set overdue flag
+    private void setOverdueFlag(Plant plant) {
+        if (plant.getLastWateredDate() != null && plant.getWateringFrequencyDays() > 0) {
+            LocalDate nextWaterDate = plant.getLastWateredDate().plusDays(plant.getWateringFrequencyDays());
+            plant.setOverdue(LocalDate.now().isAfter(nextWaterDate));
+        } else {
+            plant.setOverdue(false);
+        }
     }
 
     // 🌿 Add a new plant
@@ -36,6 +51,7 @@ public class PlantService {
             throw new RuntimeException("Plant must have an ownerUsername");
         }
         if (plant.getLogs() == null) plant.setLogs(new ArrayList<>());
+        setOverdueFlag(plant);
         return plantRepository.save(plant);
     }
 
@@ -58,6 +74,7 @@ public class PlantService {
 
         if (existing.getLogs() == null) existing.setLogs(new ArrayList<>());
 
+        setOverdueFlag(existing);
         return plantRepository.save(existing);
     }
 
@@ -76,7 +93,6 @@ public class PlantService {
         if (!plant.getOwnerUsername().equals(ownerUsername)) {
             throw new RuntimeException("You can only add logs to your own plants");
         }
-
         if (newLog.getNote() == null || newLog.getNote().trim().isEmpty()) {
             throw new RuntimeException("Log must have a note");
         }
@@ -85,6 +101,8 @@ public class PlantService {
 
         newLog.setTimestamp(Instant.now());
         plant.getLogs().add(newLog);
+
+        setOverdueFlag(plant);
         return plantRepository.save(plant);
     }
 
@@ -108,6 +126,7 @@ public class PlantService {
         if (log.getComments() == null) log.setComments(new ArrayList<>());
         log.getComments().add(newComment);
 
+        setOverdueFlag(plant);
         return plantRepository.save(plant);
     }
 
@@ -123,6 +142,18 @@ public class PlantService {
         }
 
         plant.getLogs().remove(logIndex);
+        setOverdueFlag(plant);
+        return plantRepository.save(plant);
+    }
+
+    // 🌊 Quick helper to mark plant as watered now
+    public Plant waterPlant(String plantId, String ownerUsername) {
+        Plant plant = getPlantById(plantId);
+        if (!plant.getOwnerUsername().equals(ownerUsername)) {
+            throw new RuntimeException("You can only water your own plants");
+        }
+        plant.setLastWateredDate(LocalDate.now());
+        setOverdueFlag(plant);
         return plantRepository.save(plant);
     }
 }
