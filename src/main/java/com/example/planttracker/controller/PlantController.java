@@ -10,7 +10,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/plants")
-@CrossOrigin(origins = "http://localhost:3000")
+@CrossOrigin(origins = "http://localhost:3000") // ✅ Allow frontend access
 public class PlantController {
 
     private final PlantService plantService;
@@ -26,7 +26,7 @@ public class PlantController {
     }
 
     // 🔍 Get a single plant by ID
-    @GetMapping("/{id}/details")
+    @GetMapping("/{id}")
     public Plant getPlantById(@PathVariable String id,
                               @RequestParam String username) {
         Plant plant = plantService.getPlantById(id);
