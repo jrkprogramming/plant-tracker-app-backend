@@ -10,7 +10,6 @@ import org.springframework.data.mongodb.core.MongoTemplate;
 @Configuration
 public class MongoConfig {
 
-    // Read MONGODB_URI from environment variable or application.properties
     @Value("${MONGODB_URI}")
     private String mongoUri;
 
