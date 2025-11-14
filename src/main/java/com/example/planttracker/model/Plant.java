@@ -18,18 +18,21 @@ public class Plant {
     private LocalDate lastWateredDate;
     private int wateringFrequencyDays;
 
-    // 🌿 Optional plant details
+    // Optional plant details
     private String soilType;
     private String fertilizer;
     private String sunExposure;
     private String idealTemperature;
     private String notes;
 
-    // 📸 Plant logs (photo, note, comments)
+    // Plant logs
     private List<PlantLog> logs = new ArrayList<>();
 
-    // ⚠ Overdue watering flag
+    // Overdue watering flag
     private boolean overdue;
+
+    // Public visibility flag
+    private boolean isPublic;  // backed by getter isPublic() and setter setPublic()
 
     // ---------- Getters & Setters ----------
 
@@ -135,5 +138,14 @@ public class Plant {
 
     public void setOverdue(boolean overdue) {
         this.overdue = overdue;
+    }
+
+    // Public visibility accessors
+    public boolean isPublic() {
+        return isPublic;
+    }
+
+    public void setPublic(boolean aPublic) {
+        this.isPublic = aPublic;
     }
 }
