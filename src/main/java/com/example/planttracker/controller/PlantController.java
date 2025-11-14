@@ -19,16 +19,22 @@ public class PlantController {
         this.plantService = plantService;
     }
 
-    // 🌱 Get all plants for a specific user
+    // Get all plants for a specific user
     @GetMapping
     public List<Plant> getPlants(@RequestParam String username) {
         return plantService.getPlantsByOwner(username);
     }
 
-    // 🔍 Get a single plant by ID
+    // Get public/community plants (read-only)
+    @GetMapping("/public-plants")
+    public List<Plant> getPublicPlants() {
+        // This returns plants where isPublic == true
+        return plantService.getPublicPlants();
+    }
+
+    // Get plant by id (owner-only access already enforced in service or can be checked here if desired)
     @GetMapping("/{id}")
-    public Plant getPlantById(@PathVariable String id,
-                              @RequestParam String username) {
+    public Plant getPlantById(@PathVariable String id, @RequestParam String username) {
         Plant plant = plantService.getPlantById(id);
         if (!plant.getOwnerUsername().equals(username)) {
             throw new RuntimeException("You can only access your own plants");
@@ -36,49 +42,39 @@ public class PlantController {
         return plant;
     }
 
-    // 🌿 Add a new plant
+    // Add plant
     @PostMapping
     public Plant addPlant(@RequestBody Plant plant) {
         return plantService.addPlant(plant);
     }
 
-    // 🌻 Update an existing plant
+    // Update plant
     @PutMapping("/{id}")
-    public Plant updatePlant(@PathVariable String id,
-                             @RequestBody Plant plant,
-                             @RequestParam String username) {
+    public Plant updatePlant(@PathVariable String id, @RequestBody Plant plant, @RequestParam String username) {
         return plantService.updatePlant(id, plant, username);
     }
 
-    // 🌾 Delete a plant
+    // Delete plant
     @DeleteMapping("/{id}")
-    public void deletePlant(@PathVariable String id,
-                            @RequestParam String username) {
+    public void deletePlant(@PathVariable String id, @RequestParam String username) {
         plantService.deletePlant(id, username);
     }
 
-    // 📸 Add a log (photo + note) to a plant
+    // Add a log
     @PostMapping("/{id}/logs")
-    public Plant addLog(@PathVariable String id,
-                        @RequestBody PlantLog log,
-                        @RequestParam String username) {
+    public Plant addLog(@PathVariable String id, @RequestBody PlantLog log, @RequestParam String username) {
         return plantService.addLogToPlant(id, log, username);
     }
 
-    // 💬 Add a comment to a plant log
+    // Add comment to log
     @PostMapping("/{id}/logs/{logIndex}/comments")
-    public Plant addComment(@PathVariable String id,
-                            @PathVariable int logIndex,
-                            @RequestBody PlantComment comment,
-                            @RequestParam String username) {
+    public Plant addComment(@PathVariable String id, @PathVariable int logIndex, @RequestBody PlantComment comment, @RequestParam String username) {
         return plantService.addCommentToLog(id, logIndex, comment, username);
     }
 
-    // 🗑️ Delete a plant log
+    // Delete log
     @DeleteMapping("/{id}/logs/{logIndex}")
-    public Plant deleteLog(@PathVariable String id,
-                           @PathVariable int logIndex,
-                           @RequestParam String username) {
+    public Plant deleteLog(@PathVariable String id, @PathVariable int logIndex, @RequestParam String username) {
         return plantService.deleteLog(id, logIndex, username);
     }
 }
