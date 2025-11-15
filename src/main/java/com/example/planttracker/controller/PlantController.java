@@ -4,9 +4,14 @@ import com.example.planttracker.model.Plant;
 import com.example.planttracker.model.PlantLog;
 import com.example.planttracker.model.PlantComment;
 import com.example.planttracker.service.PlantService;
+import com.example.planttracker.service.S3Service;
+
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
+
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 
 import java.util.List;
 
@@ -16,24 +21,27 @@ import java.util.List;
 public class PlantController {
 
     private final PlantService plantService;
+    private final S3Service s3Service;
 
-    public PlantController(PlantService plantService) {
+    public PlantController(PlantService plantService, S3Service s3Service) {
         this.plantService = plantService;
+        this.s3Service = s3Service;
     }
 
-    // Get all plants for a specific user
+    // ------------------------------------------
+    // 🌱 PLANT CRUD
+    // ------------------------------------------
+
     @GetMapping
     public List<Plant> getPlants(@RequestParam String username) {
         return plantService.getPlantsByOwner(username);
     }
 
-    // Get public/community plants
     @GetMapping("/public-plants")
     public List<Plant> getPublicPlants() {
         return plantService.getPublicPlants();
     }
 
-    // ⭐ FIXED: allow public plants OR owner access
     @GetMapping("/{id}")
     public Plant getPlantById(
             @PathVariable String id,
@@ -41,40 +49,28 @@ public class PlantController {
     ) {
         Plant plant = plantService.getPlantById(id);
 
-        // Normalize invalid username values
-        boolean noUser = (
-                username == null ||
-                        username.equals("undefined") ||
-                        username.equals("null") ||
-                        username.isBlank()
-        );
+        boolean noUser = username == null ||
+                username.isBlank() ||
+                username.equals("null") ||
+                username.equals("undefined");
 
-        boolean isOwner = (!noUser && username.equals(plant.getOwnerUsername()));
+        boolean isOwner = !noUser && username.equals(plant.getOwnerUsername());
 
-        // Owner can access their plant
-        if (isOwner) {
+        if (isOwner || plant.isPublic()) {
             return plant;
         }
 
-        // Public plant → accessible by anybody
-        if (plant.isPublic()) {
-            return plant;
-        }
-
-        // Otherwise private → block
         throw new ResponseStatusException(
                 HttpStatus.FORBIDDEN,
                 "This plant is private."
         );
     }
 
-    // Add plant
     @PostMapping
     public Plant addPlant(@RequestBody Plant plant) {
         return plantService.addPlant(plant);
     }
 
-    // Update plant (only owner)
     @PutMapping("/{id}")
     public Plant updatePlant(
             @PathVariable String id,
@@ -84,13 +80,18 @@ public class PlantController {
         return plantService.updatePlant(id, plant, username);
     }
 
-    // Delete plant (only owner)
     @DeleteMapping("/{id}")
-    public void deletePlant(@PathVariable String id, @RequestParam String username) {
+    public void deletePlant(
+            @PathVariable String id,
+            @RequestParam String username
+    ) {
         plantService.deletePlant(id, username);
     }
 
-    // Add a log
+    // ------------------------------------------
+    // 📸 LOGS + COMMENTS
+    // ------------------------------------------
+
     @PostMapping("/{id}/logs")
     public Plant addLog(
             @PathVariable String id,
@@ -100,7 +101,6 @@ public class PlantController {
         return plantService.addLogToPlant(id, log, username);
     }
 
-    // Add comment to log
     @PostMapping("/{id}/logs/{logIndex}/comments")
     public Plant addComment(
             @PathVariable String id,
@@ -111,7 +111,6 @@ public class PlantController {
         return plantService.addCommentToLog(id, logIndex, comment, username);
     }
 
-    // Delete a log
     @DeleteMapping("/{id}/logs/{logIndex}")
     public Plant deleteLog(
             @PathVariable String id,
@@ -119,5 +118,66 @@ public class PlantController {
             @RequestParam String username
     ) {
         return plantService.deleteLog(id, logIndex, username);
+    }
+
+    // ------------------------------------------
+    // 🖼️ S3 UPLOAD ENDPOINTS
+    // ------------------------------------------
+
+    // Upload a main plant image
+    @PostMapping("/{id}/upload")
+    public ResponseEntity<?> uploadPlantImage(
+            @PathVariable String id,
+            @RequestParam("file") MultipartFile file
+    ) {
+        try {
+            String bucket = System.getenv("AWS_BUCKET");
+            if (bucket == null) {
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .body("AWS_BUCKET environment variable is missing.");
+            }
+
+            String key = "plants/" + id + "/" + System.currentTimeMillis() + "-" + file.getOriginalFilename();
+
+            String url = s3Service.uploadFile(bucket, key, file);
+            return ResponseEntity.ok(url);
+
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body("Upload failed: " + e.getMessage());
+        }
+    }
+
+    // Upload a log photo
+    @PostMapping("/{id}/logs/upload")
+    public ResponseEntity<?> uploadLogPhoto(
+            @PathVariable String id,
+            @RequestParam("file") MultipartFile file,
+            @RequestParam String username
+    ) {
+        try {
+            Plant plant = plantService.getPlantById(id);
+
+            if (!plant.getOwnerUsername().equals(username)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                        .body("You can only upload photos for your own plants.");
+            }
+
+            String bucket = System.getenv("AWS_BUCKET");
+            if (bucket == null) {
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .body("AWS_BUCKET environment variable is missing.");
+            }
+
+            String key = "plants/" + id + "/logs/" +
+                    System.currentTimeMillis() + "-" + file.getOriginalFilename();
+
+            String url = s3Service.uploadFile(bucket, key, file);
+            return ResponseEntity.ok(url);
+
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body("Upload failed: " + e.getMessage());
+        }
     }
 }
