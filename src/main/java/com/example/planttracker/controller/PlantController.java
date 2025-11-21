@@ -9,6 +9,7 @@ import com.example.planttracker.service.S3Service;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.beans.factory.annotation.Value;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -22,10 +23,12 @@ public class PlantController {
 
     private final PlantService plantService;
     private final S3Service s3Service;
+    private final String bucket;
 
-    public PlantController(PlantService plantService, S3Service s3Service) {
+    public PlantController(PlantService plantService, S3Service s3Service, @Value("${AWS_BUCKET}") String bucket) {
         this.plantService = plantService;
         this.s3Service = s3Service;
+        this.bucket = bucket;
     }
 
     // ------------------------------------------
@@ -131,15 +134,14 @@ public class PlantController {
             @RequestParam("file") MultipartFile file
     ) {
         try {
-            String bucket = System.getenv("AWS_BUCKET");
-            if (bucket == null) {
+            if (this.bucket == null) {
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                         .body("AWS_BUCKET environment variable is missing.");
             }
 
             String key = "plants/" + id + "/" + System.currentTimeMillis() + "-" + file.getOriginalFilename();
 
-            String url = s3Service.uploadFile(bucket, key, file);
+            String url = s3Service.uploadFile(this.bucket, key, file);
             return ResponseEntity.ok(url);
 
         } catch (Exception e) {
@@ -163,8 +165,7 @@ public class PlantController {
                         .body("You can only upload photos for your own plants.");
             }
 
-            String bucket = System.getenv("AWS_BUCKET");
-            if (bucket == null) {
+            if (this.bucket == null) {
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                         .body("AWS_BUCKET environment variable is missing.");
             }
@@ -172,7 +173,7 @@ public class PlantController {
             String key = "plants/" + id + "/logs/" +
                     System.currentTimeMillis() + "-" + file.getOriginalFilename();
 
-            String url = s3Service.uploadFile(bucket, key, file);
+            String url = s3Service.uploadFile(this.bucket, key, file);
             return ResponseEntity.ok(url);
 
         } catch (Exception e) {

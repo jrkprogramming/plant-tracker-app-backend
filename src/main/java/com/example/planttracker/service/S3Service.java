@@ -8,6 +8,8 @@ import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
+import org.springframework.beans.factory.annotation.Value;
 
 import java.io.IOException;
 
@@ -15,16 +17,13 @@ import java.io.IOException;
 public class S3Service {
 
     private final S3Client s3Client;
+    private final String region;
 
-    public S3Service() {
-
-        String region = System.getenv("AWS_REGION");
-        String accessKey = System.getenv("AWS_ACCESS_KEY_ID");
-        String secretKey = System.getenv("AWS_SECRET_ACCESS_KEY");
-
-        if (region == null || accessKey == null || secretKey == null) {
-            throw new RuntimeException("AWS environment variables are missing.");
-        }
+    public S3Service(
+            @Value("${AWS_REGION}") String region,
+            @Value("${AWS_ACCESS_KEY_ID}") String accessKey,
+            @Value("${AWS_SECRET_ACCESS_KEY}") String secretKey) {
+        this.region = region;
 
         this.s3Client = S3Client.builder()
                 .region(Region.of(region))
@@ -39,25 +38,33 @@ public class S3Service {
     public String uploadFile(String bucket, String key, MultipartFile file) {
 
         try {
-            // ❌ REMOVE ACL — Bucket owner enforced means ACLs forbidden
             PutObjectRequest putRequest = PutObjectRequest.builder()
                     .bucket(bucket)
                     .key(key)
                     .contentType(file.getContentType())
                     .build();
 
+            // IMPORTANT: Stream the upload to avoid corrupted images
             s3Client.putObject(
                     putRequest,
                     RequestBody.fromInputStream(file.getInputStream(), file.getSize())
             );
 
-            // Public URL (only works if bucket policy is public OR CloudFront is used)
-            String region = System.getenv("AWS_REGION");
-
-            return "https://" + bucket + ".s3." + region + ".amazonaws.com/" + key;
+            return "https://" + bucket + ".s3." +
+                    this.region +
+                    ".amazonaws.com/" + key;
 
         } catch (IOException e) {
-            throw new RuntimeException("Failed to upload file: " + e.getMessage(), e);
+            throw new RuntimeException("Failed to upload file", e);
         }
+    }
+
+    public void deleteFile(String bucket, String key) {
+        DeleteObjectRequest deleteRequest = DeleteObjectRequest.builder()
+                .bucket(bucket)
+                .key(key)
+                .build();
+
+        s3Client.deleteObject(deleteRequest);
     }
 }
