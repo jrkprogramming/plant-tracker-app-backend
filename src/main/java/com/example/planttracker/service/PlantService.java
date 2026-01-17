@@ -5,18 +5,25 @@ import com.example.planttracker.model.PlantLog;
 import com.example.planttracker.model.PlantComment;
 import com.example.planttracker.repository.PlantRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Value;
 
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.net.URI;
+import java.net.URISyntaxException;
 
 @Service
 public class PlantService {
 
     private final PlantRepository plantRepository;
+    private final S3Service s3Service;
+    private final String bucket;
 
-    public PlantService(PlantRepository plantRepository) {
+    public PlantService(PlantRepository plantRepository, S3Service s3Service, @Value("${AWS_BUCKET}") String bucket) {
         this.plantRepository = plantRepository;
+        this.s3Service = s3Service;
+        this.bucket = bucket;
     }
 
     // Get all plants for a specific user
@@ -123,7 +130,61 @@ public class PlantService {
         if (logIndex < 0 || logIndex >= plant.getLogs().size()) {
             throw new RuntimeException("Invalid log index");
         }
+        String photoUrl = plant.getLogs().get(logIndex).getPhotoUrl();
         plant.getLogs().remove(logIndex);
+        deletePhotoFromS3IfPresent(photoUrl);
         return plantRepository.save(plant);
+    }
+
+    private void deletePhotoFromS3IfPresent(String photoUrl) {
+        if (photoUrl == null || photoUrl.isBlank()) return;
+
+        String bucket = extractBucketFromUrl(photoUrl);
+        if (bucket == null || bucket.isBlank()) {
+            bucket = this.bucket;
+        }
+        if (bucket == null || bucket.isBlank()) {
+            System.err.println("Skipping S3 delete — missing bucket for url: " + photoUrl);
+            return;
+        }
+
+        String key = extractKeyFromUrl(photoUrl);
+        if (key == null || key.isBlank()) {
+            System.err.println("Skipping S3 delete — missing key for url: " + photoUrl);
+            return;
+        }
+
+        try {
+            s3Service.deleteFile(bucket, key);
+            System.out.println("Deleted S3 object: bucket=" + bucket + " key=" + key);
+        } catch (Exception e) {
+            // Log and continue so log deletion still succeeds
+            System.err.println("Failed to delete S3 object for photoUrl=" + photoUrl + " : " + e.getMessage());
+        }
+    }
+
+    private String extractKeyFromUrl(String url) {
+        try {
+            URI uri = new URI(url);
+            String path = uri.getPath();
+            if (path == null || path.isBlank()) return null;
+            return path.startsWith("/") ? path.substring(1) : path;
+        } catch (URISyntaxException e) {
+            return null;
+        }
+    }
+
+    private String extractBucketFromUrl(String url) {
+        try {
+            URI uri = new URI(url);
+            String host = uri.getHost();
+            if (host == null || host.isBlank()) return null;
+            // Expecting pattern: <bucket>.s3.<region>.amazonaws.com
+            int dot = host.indexOf(".s3.");
+            if (dot <= 0) return null;
+            return host.substring(0, dot);
+        } catch (URISyntaxException e) {
+            return null;
+        }
     }
 }
